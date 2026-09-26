@@ -137,6 +137,25 @@ const WEAPON_MODS={"Epitaph Prime":["Barrel Diffusion","Pistol Pestilence","Fros
 const W={"Epitaph Prime":['Secondary','Primer / status coverage'],"Okina Prime Incarnon":['Melee','Condition Overload / Melee Influence'],"Burston Prime Incarnon":['Primary','Crit / sustained boss damage'],"Kuva Sobek":['Primary','Acid Shells / Saryn configuration'],"Bo Prime Incarnon":['Melee','Incarnon staff / general use'],"Glaive Prime":['Melee','Heavy detonation / Riven'],"Akbolto Prime":['Secondary','Multishot + Damage Riven'],"Acceltra Prime":['Primary','Rapid fire / high ammo demand'],"Regulators Prime":['Exalted secondary','Mesa ability weapon']};
 let state={page:'home',frame:'saryn',build:0,weapon:'Epitaph Prime',query:''};const P='sol-agenda-ui-prototype:';const safe=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const CUSTOM_FRAMES=savedSlot('frames:custom',[]);for(const frame of CUSTOM_FRAMES){if(!FRAMES.some(f=>f.id===frame.id)&&Array.isArray(frame.builds)&&frame.builds.length)FRAMES.push(frame)}const DELETED_FRAMES=new Set(savedSlot('frames:deleted',[]));for(let i=FRAMES.length-1;i>=0;i--)if(DELETED_FRAMES.has(FRAMES[i].id))FRAMES.splice(i,1)
+// Refresh the saved Equinox defaults once without touching frame status, shards, polarities, portraits, or personal notes.
+(function migrateEquinoxNukeV2(){
+  if(savedSlot('migration-equinox-nuke-v2',false))return;
+  try{
+    let frame=FRAMES.find(f=>f.id==='equinox'),saved=savedSlot('frame-builds:equinox',null);
+    if(frame&&Array.isArray(saved)&&saved.length){
+      let keep0={polarities:saved[0]?.polarities,shards:saved[0]?.shards,userNote:saved[0]?.userNote};
+      saved[0]={...(saved[0]||{}),...frame.builds[0],arcanes:['Arcane Aegis','Molt Augmented']};
+      for(const [key,value] of Object.entries(keep0))if(value!==undefined)saved[0][key]=value;
+      if(saved[1]&&frame.builds[1])saved[1]={...saved[1],loop:frame.builds[1].loop};
+      saveSlot('frame-builds:equinox',saved);
+    }
+    let remove=['name','focus','replace','loop','note',...Array.from({length:10},(_,i)=>'modtext:'+i),...'arcane:0 arcane:1'.split(' ')];
+    for(const suffix of remove)localStorage.removeItem(P+'text:equinox:0:'+suffix);
+    localStorage.removeItem(P+'text:equinox:1:loop');
+    localStorage.removeItem(P+'frame-weapons:equinox:0');
+    saveSlot('migration-equinox-nuke-v2',true);
+  }catch(err){console.warn('Equinox nuke migration skipped',err)}
+})();
 for(const frame of FRAMES){let savedBuilds=savedSlot('frame-builds:'+frame.id,null);if(Array.isArray(savedBuilds)&&savedBuilds.length)frame.builds=savedBuilds}
 function visibleFrames(){return [...FRAMES].filter(f=>(shown('frame:'+f.id+':name',f.name)+' '+shown('frame:'+f.id+':subtitle',f.subtitle)).toLowerCase().includes(state.query.toLowerCase())).sort((a,b)=>shown('frame:'+a.id+':name',a.name).localeCompare(shown('frame:'+b.id+':name',b.name)))}
 function imgUrl(f){return savedSlot('image:'+f.id,null)||ART[f.id]||''}
